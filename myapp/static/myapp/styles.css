@@ -1,0 +1,15 @@
+body {
+    font-family: Tahoma, sans-serif;
+    background-color: #f4f4f4;
+    color: #333;
+    text-align: left;
+    padding: 10px;
+}
+
+h1 {
+    color: #007BFF;
+}
+
+p {
+    font-size: 1.2em;
+}

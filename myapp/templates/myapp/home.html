@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block title %}Home - Client Tracking{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h1 class="h3 mb-0">Welcome to Client Tracking</h1>
+                </div>
+                <div class="card-body">
+                    {% if user.is_authenticated %}
+                        <h2 class="h4 mb-4">Welcome, {{ user.username }}!</h2>
+                        <div class="d-grid gap-3">
+                            <a href="{% url 'data_entry' %}" class="btn btn-primary btn-lg">
+                                <i class="fas fa-edit me-2"></i>Data Entry
+                            </a>
+                            {% if user.is_staff %}
+                                <a href="{% url 'admin:index' %}" class="btn btn-secondary btn-lg">
+                                    <i class="fas fa-cog me-2"></i>Admin Panel
+                                </a>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <p class="lead mb-4">Please log in to access the system.</p>
+                        <div class="d-grid">
+                            <a href="{% url 'admin:login' %}" class="btn btn-primary btn-lg">
+                                <i class="fas fa-sign-in-alt me-2"></i>Login
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
