@@ -1,0 +1,242 @@
+// ClientPlus Database Schema - Converted from SQLite to MySQL
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// Authentication and User Management
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  username    String   @unique
+  password    String
+  role        UserRole @default(CONSULTANT)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  userDomains      UserDomain[]
+  pagePermissions  PagePermission[]
+  histDataEntries  HistData[]
+  scopesCreated    Scope[]
+  
+  @@map("users")
+}
+
+model SuperUser {
+  userId      String   @id
+  username    String
+  createdDate DateTime @default(now())
+  
+  @@map("super_users")
+}
+
+// Client Management
+model ClientData {
+  id           Int        @id @default(autoincrement())
+  clientName   String     @unique @map("client_name")
+  type         ClientType
+  status       ClientStatus
+  activity     String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  
+  // Relations
+  histDataEntries HistData[]
+  
+  @@map("clients_data")
+}
+
+// Consultant Management
+model ConsultantDeal {
+  id           Int    @id @default(autoincrement())
+  year         Int
+  month        Int
+  consultantId Int    @map("consultant_id")
+  consultant   String
+  dealDays     Int    @map("deal_days")
+  role         ConsultantRole @default(CONSULTANT)
+  
+  @@unique([year, month, consultantId])
+  @@map("consultant_deals")
+}
+
+model ConsultantVacation {
+  id           Int    @id @default(autoincrement())
+  consultant   String
+  days         Int
+  year         Int
+  month        Int
+  consultantId Int    @map("consultant_id")
+  
+  @@unique([year, month, consultantId])
+  @@map("consultant_vacation")
+}
+
+// Domain Structure (Hierarchical)
+model Domain {
+  id         Int      @id @default(autoincrement()) @map("domain_id")
+  domainName String   @map("domain_name")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  // Relations
+  subdomains      Subdomain[]
+  scopeTemplates  ScopeTemplate[]
+  userDomains     UserDomain[]
+  
+  @@map("domains")
+}
+
+model Subdomain {
+  id              Int     @id @default(autoincrement()) @map("subdomain_id")
+  domainId        Int     @map("domain_id")
+  subdomainName   String  @map("subdomain_name")
+  leadConsultant  String? @map("lead_consultant")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  domain Domain @relation(fields: [domainId], references: [id])
+  scopes Scope[]
+  
+  @@map("subdomains")
+}
+
+model Scope {
+  id          Int    @id @default(autoincrement()) @map("scope_id")
+  subdomainId Int    @map("subdomain_id")
+  scopeName   String @map("scope_name")
+  createdBy   String @map("created_by")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  subdomain Subdomain @relation(fields: [subdomainId], references: [id])
+  creator   User      @relation(fields: [createdBy], references: [username])
+  
+  @@map("scopes")
+}
+
+model ScopeTemplate {
+  id           Int     @id @default(autoincrement()) @map("template_id")
+  domainId     Int     @map("domain_id")
+  templateName String  @map("template_name")
+  description  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  // Relations
+  domain Domain @relation(fields: [domainId], references: [id])
+  
+  @@map("scope_templates")
+}
+
+// Main Time Tracking Data
+model HistData {
+  id            Int      @id @default(autoincrement()) @map("rec_id")
+  source        String
+  year          Int
+  monthNo       Int      @map("month_no")
+  day           Int
+  month         String
+  consultantId  Int      @map("consultant_id")
+  consultant    String
+  client        String
+  activityType  String   @map("activity_type")
+  workingHours  Decimal  @map("working_hours") @db.Decimal(4,2)
+  notes         String?  @db.Text
+  domain        String
+  subdomain     String?
+  scope         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relations
+  user       User       @relation(fields: [consultant], references: [username])
+  clientData ClientData @relation(fields: [client], references: [clientName])
+  
+  @@index([year, monthNo, consultantId])
+  @@index([consultant])
+  @@index([client])
+  @@map("hist_data")
+}
+
+// Access Control
+model PagePermission {
+  user   String      @map("user")
+  page   String      @map("page")
+  access AccessLevel @map("access")
+  
+  // Relations
+  userRef User @relation(fields: [user], references: [username])
+  
+  @@id([user, page])
+  @@map("page_permissions")
+}
+
+model UserDomain {
+  userId   String @map("user_id")
+  username String @map("username")
+  domainId Int    @map("domain_id")
+  
+  // Relations
+  user   User   @relation(fields: [userId], references: [id])
+  domain Domain @relation(fields: [domainId], references: [id])
+  
+  @@id([userId, domainId])
+  @@map("user_domains")
+}
+
+// Feedback System
+model Feedback {
+  id        Int          @id @default(autoincrement())
+  type      FeedbackType
+  message   String       @db.Text
+  user      String
+  timestamp DateTime     @default(now())
+  
+  @@map("feedback")
+}
+
+// Enums
+enum UserRole {
+  SUPER_USER
+  LEAD_CONSULTANT
+  CONSULTANT
+  SUPPORTING
+}
+
+enum ConsultantRole {
+  CONSULTANT
+  SUPPORTING
+}
+
+enum ClientType {
+  PRJ  // Project
+  RET  // Retainer
+  FFNT // Internal
+}
+
+enum ClientStatus {
+  A // Active
+  E // Ended
+}
+
+enum AccessLevel {
+  SHOW
+  HIDE
+  EDIT
+}
+
+enum FeedbackType {
+  BUG
+  FEATURE
+  SUGGESTION
+  GENERAL
+}
