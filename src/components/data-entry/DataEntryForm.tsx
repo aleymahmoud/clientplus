@@ -204,60 +204,78 @@ const fetchSubdomains = async (domainId: number) => {
     }))
   }
 
-  const submitAll = async () => {
-    const validEntries = entries.filter(entry => 
-        entry.domainId > 0 && entry.subdomainId > 0 && entry.scopeId > 0 && entry.hours > 0 && entry.notes
-    )
+const submitAll = async () => {
+  // Enhanced validation with detailed error messages
+  const validationErrors: string[] = []
+  const validEntries = entries.filter((entry, index) => {
+    const errors: string[] = []
     
-    if (validEntries.length === 0) {
-      alert('Please fill at least one complete entry')
-      return
-    }
-
-    setIsSubmitting(true)
-    try {
-      const response = await fetch('/api/entries', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          entries: validEntries.map(entry => ({
-            domain: entry.domainName,
-            subdomain: entry.subdomainName,
-            scope: entry.scopeName,
-            hours: entry.hours,
-            notes: entry.notes
-          }))
-        }),
-      })
-
-      if (response.ok) {
-        const result = await response.json()
-        setEntries([{ 
-          id: nextId, 
-          domainId: 0, 
-          domainName: '', 
-          subdomainId: 0, 
-          subdomainName: '', 
-          scopeId: 0, 
-          scopeName: '', 
-          hours: 0, 
-          notes: '' 
-        }])
-        setNextId(nextId + 1)
-        alert(result.message)
-      } else {
-        const error = await response.json()
-        alert(error.error || 'Failed to save entries')
-      }
-    } catch (error) {
-      console.error('Error saving entries:', error)
-      alert('Error saving entries. Please try again.')
-    } finally {
-      setIsSubmitting(false)
-    }
+    if (entry.domainId <= 0) errors.push(`Entry ${index + 1}: Domain is required`)
+    if (entry.subdomainId <= 0) errors.push(`Entry ${index + 1}: Subdomain is required`)
+    if (entry.scopeId <= 0) errors.push(`Entry ${index + 1}: Scope is required`)
+    if (entry.hours <= 0) errors.push(`Entry ${index + 1}: Hours must be greater than 0`)
+    if (entry.hours > 24) errors.push(`Entry ${index + 1}: Hours cannot exceed 24`)
+    if (!entry.notes || !entry.notes.trim()) errors.push(`Entry ${index + 1}: Notes are required`)
+    if (entry.notes && entry.notes.trim().length < 3) errors.push(`Entry ${index + 1}: Notes must be at least 3 characters`)
+    
+    validationErrors.push(...errors)
+    return errors.length === 0
+  })
+  
+  if (validationErrors.length > 0) {
+    alert('Please fix these issues:\n\n' + validationErrors.join('\n'))
+    return
   }
+  
+  if (validEntries.length === 0) {
+    alert('Please complete at least one entry with all required fields')
+    return
+  }
+
+  setIsSubmitting(true)
+  try {
+    const response = await fetch('/api/entries', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        entries: validEntries.map(entry => ({
+          domain: entry.domainName,
+          subdomain: entry.subdomainName,
+          scope: entry.scopeName,
+          hours: entry.hours,
+          notes: entry.notes.trim()
+        }))
+      }),
+    })
+
+    if (response.ok) {
+      const result = await response.json()
+      setEntries([{ 
+        id: nextId, 
+        domainId: 0, 
+        domainName: '', 
+        subdomainId: 0, 
+        subdomainName: '', 
+        scopeId: 0, 
+        scopeName: '', 
+        hours: 0, 
+        notes: '' 
+      }])
+      setNextId(nextId + 1)
+      alert('Success: ' + result.message)
+    } else {
+      const error = await response.json()
+      alert('Save failed: ' + (error.error || 'Unknown server error'))
+    }
+  } catch (error) {
+    console.error('Error saving entries:', error)
+    alert('Network error: Please check your connection and try again.')
+  } finally {
+    setIsSubmitting(false)
+  }
+}
 
   if (!isMounted || loading) {
     return (
