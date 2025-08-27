@@ -60,84 +60,69 @@ export default function DashboardPage() {
 
   useEffect(() => {
     // Simulate API calls - replace with actual API calls later
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        
-        // Mock data - replace with actual API calls
-        const mockStats: DashboardStats = {
-          todayHours: 6.5,
-          monthHours: 142,
-          utilization: 89,
-          activeClients: 8
-        };
+const fetchDashboardData = async () => {
+  try {
+    setLoading(true);
+    
+    // Fetch real dashboard stats
+    const statsResponse = await fetch('/api/dashboard/stats');
+    if (statsResponse.ok) {
+      const statsData = await statsResponse.json();
+      setStats(statsData);
+    } else {
+      console.error('Failed to fetch dashboard stats');
+      // Fallback to default values
+      setStats({
+        todayHours: 0,
+        monthHours: 0,
+        utilization: 0,
+        activeClients: 0
+      });
+    }
 
-        const mockTodayEntries: TodayEntry[] = [
-          {
-            id: 1,
-            client: 'ElAbd',
-            domain: 'Consulting',
-            subdomain: 'ElAbd',
-            scope: 'Strategic Planning',
-            hours: 3.5,
-            notes: 'Strategy review meeting with management team',
-            createdAt: new Date()
-          },
-          {
-            id: 2,
-            client: 'FF In-Meeting',
-            domain: 'Consulting',
-            subdomain: 'Forefront',
-            scope: 'Team Meeting',
-            hours: 1.0,
-            notes: 'Weekly team standup and project updates',
-            createdAt: new Date()
-          },
-          {
-            id: 3,
-            client: 'Wander',
-            domain: 'Consulting',
-            subdomain: 'Wander',
-            scope: 'Process Enhancement',
-            hours: 2.0,
-            notes: 'Process mapping and optimization workshop',
-            createdAt: new Date()
-          }
-        ];
+    // Fetch real today's entries
+    const entriesResponse = await fetch('/api/dashboard/today');
+    if (entriesResponse.ok) {
+      const entriesData = await entriesResponse.json();
+      const formattedEntries: TodayEntry[] = entriesData.map((entry: any) => ({
+        id: entry.id,
+        client: entry.client,
+        domain: entry.domain,
+        subdomain: entry.subdomain,
+        scope: entry.scope,
+        hours: entry.hours,
+        notes: entry.notes,
+        createdAt: new Date(entry.createdAt)
+      }));
+      setTodayEntries(formattedEntries);
+    } else {
+      console.error('Failed to fetch today\'s entries');
+      setTodayEntries([]);
+    }
 
-        const mockRecentActivity: RecentActivity[] = [
-          {
-            id: 1,
-            type: 'entry_added',
-            description: 'Added 3.5h entry for ElAbd - Strategic Planning',
-            timestamp: new Date(Date.now() - 30 * 60 * 1000), // 30 min ago
-            user: session?.user.username || 'You'
-          },
-          {
-            id: 2,
-            type: 'entry_updated',
-            description: 'Updated Wander entry from 1.5h to 2.0h',
-            timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-            user: session?.user.username || 'You'
-          },
-          {
-            id: 3,
-            type: 'entry_added',
-            description: 'Added team meeting entry - 1.0h',
-            timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000), // 3 hours ago
-            user: session?.user.username || 'You'
-          }
-        ];
+// Fetch real recent activity
+const activityResponse = await fetch('/api/dashboard/activity');
+if (activityResponse.ok) {
+  const activityData = await activityResponse.json();
+  const formattedActivity: RecentActivity[] = activityData.map((activity: any) => ({
+    id: activity.id,
+    type: activity.type,
+    description: activity.description,
+    timestamp: new Date(activity.timestamp),
+    user: activity.user
+  }));
+  setRecentActivity(formattedActivity);
+} else {
+  console.error('Failed to fetch recent activity');
+  setRecentActivity([]);
+}
 
-        setStats(mockStats);
-        setTodayEntries(mockTodayEntries);
-        setRecentActivity(mockRecentActivity);
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  } catch (error) {
+    console.error('Error fetching dashboard data:', error);
+  } finally {
+    setLoading(false);
+  }
+};
 
     if (session) {
       fetchDashboardData();
@@ -192,7 +177,7 @@ export default function DashboardPage() {
             <CardContent>
               <div className="text-2xl font-bold">{stats.todayHours}</div>
               <p className="text-xs text-muted-foreground">
-                +2.5 from yesterday
+                Daily progress
               </p>
             </CardContent>
           </Card>
@@ -205,7 +190,7 @@ export default function DashboardPage() {
             <CardContent>
               <div className="text-2xl font-bold">{stats.monthHours}h</div>
               <p className="text-xs text-muted-foreground">
-                18 working days
+                Monthly total
               </p>
             </CardContent>
           </Card>
@@ -218,7 +203,7 @@ export default function DashboardPage() {
             <CardContent>
               <div className="text-2xl font-bold text-green-600">{stats.utilization}%</div>
               <p className="text-xs text-muted-foreground">
-                Above target (70%)
+                {stats.utilization >= 70 ? 'Above target' : stats.utilization >= 50 ? 'On track' : 'Below target'}
               </p>
             </CardContent>
           </Card>
@@ -231,7 +216,7 @@ export default function DashboardPage() {
             <CardContent>
               <div className="text-2xl font-bold">{stats.activeClients}</div>
               <p className="text-xs text-muted-foreground">
-                3 new this month
+                Active this month
               </p>
             </CardContent>
           </Card>
