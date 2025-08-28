@@ -240,3 +240,17 @@ enum FeedbackType {
   SUGGESTION
   GENERAL
 }
+// Add this new model to your existing prisma/schema.prisma file
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expires   DateTime
+  createdAt DateTime @default(now())
+  used      Boolean  @default(false)
+  
+  @@index([token])
+  @@index([email])
+  @@map("password_reset_tokens")
+}

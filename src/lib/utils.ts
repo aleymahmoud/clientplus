@@ -76,3 +76,5 @@ export const APP_CONFIG = {
   supportedFileTypes: ['xlsx', 'csv', 'pdf'],
   maxFileSize: 10 * 1024 * 1024, // 10MB
 } as const;
+
+
