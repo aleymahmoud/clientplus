@@ -1,57 +1,55 @@
 // src/app/api/dashboard/activity/route.ts
 import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 export async function GET() {
   try {
-    console.log('Fetching recent activity...')
+    const session = await getServerSession(authOptions)
     
-    // For now, using mock session
-    const session = { user: { name: 'islam' } }
-    
-    // Get recent entries (last 10) for activity feed
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    console.log('Fetching activity for user:', session.user.username)
+
+    // Get recent entries (last 10) for the current user
     const recentEntries = await prisma.histData.findMany({
       where: {
-        consultant: session.user.name,
+        consultant: session.user.username,
       },
       select: {
         id: true,
         client: true,
         domain: true,
-        subdomain: true,
-        scope: true,
         workingHours: true,
         createdAt: true,
         updatedAt: true,
       },
       orderBy: {
-        updatedAt: 'desc',
+        createdAt: 'desc',
       },
-      take: 5,
+      take: 10,
     })
 
     // Convert entries to activity format
-    const activities = recentEntries.map((entry) => {
-      const wasUpdated = entry.updatedAt.getTime() !== entry.createdAt.getTime()
-      
-      return {
-        id: entry.id,
-        type: wasUpdated ? 'entry_updated' : 'entry_added',
-        description: wasUpdated 
-          ? `Updated ${entry.client} entry - ${Number(entry.workingHours)}h`
-          : `Added ${entry.client} entry - ${Number(entry.workingHours)}h`,
-        timestamp: wasUpdated ? entry.updatedAt : entry.createdAt,
-        user: session.user.name,
-      }
-    })
+    const activities = recentEntries.map(entry => ({
+      id: entry.id,
+      type: 'entry_added' as const,
+      description: `Added ${entry.workingHours}h entry for ${entry.client} - ${entry.domain}`,
+      timestamp: entry.createdAt.toISOString(),
+      user: session.user.username,
+    }))
+
+    console.log('Generated activities:', activities.length)
 
     return NextResponse.json(activities)
-
   } catch (error) {
-    console.error('Error fetching recent activity:', error)
+    console.error('Error fetching dashboard activity:', error)
     return NextResponse.json({ 
-      error: 'Failed to fetch recent activity',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Failed to fetch dashboard activity',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
   }
 }

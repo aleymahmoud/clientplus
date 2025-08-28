@@ -1,8 +1,8 @@
-// src/components/data-entry/DataEntryForm.tsx
+// src/components/data-entry/ExceptionalEntryForm.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
-import { toast } from 'sonner'  // ADD THIS LINE
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Plus, X, Save } from 'lucide-react'
+import { Plus, X, Save, Calendar } from 'lucide-react'
 
 interface Domain {
   id: number
@@ -36,6 +36,7 @@ interface Scope {
 
 interface TimeEntry {
   id: number
+  date: string
   domainId: number
   domainName: string
   subdomainId: number
@@ -48,7 +49,7 @@ interface TimeEntry {
 
 type EntryFormData = Omit<TimeEntry, 'id'>
 
-export default function DataEntryForm({ onEntriesUpdated }: { onEntriesUpdated?: () => void }) {  // ADD onEntriesUpdated prop
+export default function ExceptionalEntryForm({ onEntriesUpdated }: { onEntriesUpdated?: () => void }) {
   const [domains, setDomains] = useState<Domain[]>([])
   const [subdomainsMap, setSubdomainsMap] = useState<Record<number, Subdomain[]>>({})
   const [scopesMap, setScopesMap] = useState<Record<number, Scope[]>>({})
@@ -56,6 +57,7 @@ export default function DataEntryForm({ onEntriesUpdated }: { onEntriesUpdated?:
   const [entries, setEntries] = useState<TimeEntry[]>([
     { 
       id: 1, 
+      date: new Date().toISOString().split('T')[0], // Default to today
       domainId: 0, 
       domainName: '', 
       subdomainId: 0, 
@@ -82,7 +84,7 @@ export default function DataEntryForm({ onEntriesUpdated }: { onEntriesUpdated?:
       
       if (!response.ok) {
         console.error('API error:', response.status, response.statusText)
-        toast.error('Failed to load domains')  // REPLACE alert with toast
+        toast.error('Failed to load domains')
         setLoading(false)
         return
       }
@@ -94,12 +96,12 @@ export default function DataEntryForm({ onEntriesUpdated }: { onEntriesUpdated?:
         setDomains(data)
       } else {
         console.error('Expected array of domains, got:', data)
-        toast.error('Invalid domains data format')  // REPLACE alert with toast
+        toast.error('Invalid domains data format')
         setDomains([])
       }
     } catch (error) {
       console.error('Error fetching domains:', error)
-      toast.error('Error loading domains')  // REPLACE alert with toast
+      toast.error('Error loading domains')
       setDomains([])
     } finally {
       setLoading(false)
@@ -116,11 +118,11 @@ export default function DataEntryForm({ onEntriesUpdated }: { onEntriesUpdated?:
           [domainId]: data
         }))
       } else {
-        toast.error('Failed to load subdomains')  // REPLACE console.error with toast
+        toast.error('Failed to load subdomains')
       }
     } catch (error) {
       console.error('Error fetching subdomains:', error)
-      toast.error('Error loading subdomains')  // ADD toast for error
+      toast.error('Error loading subdomains')
     }
   }
 
@@ -134,17 +136,18 @@ export default function DataEntryForm({ onEntriesUpdated }: { onEntriesUpdated?:
           [subdomainId]: data
         }))
       } else {
-        toast.error('Failed to load scopes')  // REPLACE console.error with toast
+        toast.error('Failed to load scopes')
       }
     } catch (error) {
       console.error('Error fetching scopes:', error)
-      toast.error('Error loading scopes')  // ADD toast for error
+      toast.error('Error loading scopes')
     }
   }
 
   const addEntry = () => {
     const newEntry: TimeEntry = {
       id: nextId,
+      date: new Date().toISOString().split('T')[0],
       domainId: 0,
       domainName: '',
       subdomainId: 0,
@@ -156,15 +159,15 @@ export default function DataEntryForm({ onEntriesUpdated }: { onEntriesUpdated?:
     }
     setNextId(nextId + 1)
     setEntries([newEntry, ...entries])
-    toast.success('New entry added')  // ADD toast notification
+    toast.success('New entry added')
   }
 
   const deleteEntry = (id: number) => {
     if (entries.length > 1) {
       setEntries(entries.filter(entry => entry.id !== id))
-      toast.success('Entry removed')  // ADD toast notification
+      toast.success('Entry removed')
     } else {
-      toast.warning('Cannot delete the last entry')  // ADD toast notification
+      toast.warning('Cannot delete the last entry')
     }
   }
 
@@ -181,7 +184,6 @@ export default function DataEntryForm({ onEntriesUpdated }: { onEntriesUpdated?:
           updated.subdomainName = ''
           updated.scopeId = 0
           updated.scopeName = ''
-          // Fetch subdomains for this domain
           fetchSubdomains(value as number)
         } else if (field === 'subdomainId') {
           const subdomain = subdomainsMap[updated.domainId]?.find(s => s.id === value)
@@ -189,7 +191,6 @@ export default function DataEntryForm({ onEntriesUpdated }: { onEntriesUpdated?:
           updated.subdomainName = subdomain?.subdomainName || ''
           updated.scopeId = 0
           updated.scopeName = ''
-          // Fetch scopes for this subdomain
           fetchScopes(value as number)
         } else if (field === 'scopeId') {
           const scope = scopesMap[updated.subdomainId]?.find(s => s.id === value)
@@ -206,11 +207,12 @@ export default function DataEntryForm({ onEntriesUpdated }: { onEntriesUpdated?:
   }
 
   const submitAll = async () => {
-    // Enhanced validation with detailed error messages
     const validationErrors: string[] = []
     const validEntries = entries.filter((entry, index) => {
       const errors: string[] = []
       
+      if (!entry.date) errors.push(`Entry ${index + 1}: Date is required`)
+      if (new Date(entry.date) > new Date()) errors.push(`Entry ${index + 1}: Date cannot be in the future`)
       if (entry.domainId <= 0) errors.push(`Entry ${index + 1}: Domain is required`)
       if (entry.subdomainId <= 0) errors.push(`Entry ${index + 1}: Subdomain is required`)
       if (entry.scopeId <= 0) errors.push(`Entry ${index + 1}: Scope is required`)
@@ -225,30 +227,32 @@ export default function DataEntryForm({ onEntriesUpdated }: { onEntriesUpdated?:
     })
 
     if (validationErrors.length > 0) {
-      toast.error(`Validation errors:\n${validationErrors.join('\n')}`)  // REPLACE alert with toast
+      toast.error(`Validation errors:\n${validationErrors.join('\n')}`)
       return
     }
 
     if (validEntries.length === 0) {
-      toast.warning('No valid entries to submit')  // REPLACE alert with toast
+      toast.warning('No valid entries to submit')
       return
     }
 
     setIsSubmitting(true)
     
     try {
-      console.log('Submitting entries:', validEntries)
+      console.log('Submitting exceptional entries:', validEntries)
       
-      // Transform data to match API expectations
+      // Transform data to match API expectations - with custom date and source
       const apiEntries = validEntries.map(entry => ({
+        date: entry.date,
         domain: entry.domainName,
         subdomain: entry.subdomainName,
         scope: entry.scopeName,
         hours: entry.hours,
-        notes: entry.notes
+        notes: entry.notes,
+        source: 'Exceptional Entry' // Mark as exceptional entry
       }))
 
-      const response = await fetch('/api/entries', {
+      const response = await fetch('/api/entries/exceptional', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -260,11 +264,12 @@ export default function DataEntryForm({ onEntriesUpdated }: { onEntriesUpdated?:
       console.log('API Response:', result)
 
       if (response.ok) {
-        toast.success(`${validEntries.length} entries saved successfully!`)  // REPLACE alert with toast
+        toast.success(`${validEntries.length} exceptional entries saved successfully!`)
         
         // Reset form after successful submission
         setEntries([{
           id: 1,
+          date: new Date().toISOString().split('T')[0],
           domainId: 0,
           domainName: '',
           subdomainId: 0,
@@ -276,16 +281,15 @@ export default function DataEntryForm({ onEntriesUpdated }: { onEntriesUpdated?:
         }])
         setNextId(2)
 
-        // Trigger refresh of today's entries if callback provided
         if (onEntriesUpdated) {
           onEntriesUpdated()
         }
       } else {
-        toast.error(`Failed to save entries: ${result.error || 'Unknown error'}`)  // REPLACE alert with toast
+        toast.error(`Failed to save entries: ${result.error || 'Unknown error'}`)
       }
     } catch (error) {
       console.error('Error submitting entries:', error)
-      toast.error('Network error while saving entries')  // REPLACE alert with toast
+      toast.error('Network error while saving entries')
     } finally {
       setIsSubmitting(false)
     }
@@ -309,8 +313,8 @@ export default function DataEntryForm({ onEntriesUpdated }: { onEntriesUpdated?:
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          Time Entries
+          <Calendar className="h-4 w-4" />
+          Exceptional Entries
         </CardTitle>
         <div className="flex items-center space-x-2">
           <Button onClick={addEntry} variant="outline" size="sm">
@@ -321,7 +325,7 @@ export default function DataEntryForm({ onEntriesUpdated }: { onEntriesUpdated?:
             onClick={submitAll} 
             disabled={isSubmitting} 
             size="sm"
-            className="bg-black text-white hover:bg-gray-800"
+            className="bg-orange-600 text-white hover:bg-orange-700"
           >
             <Save className="h-4 w-4 mr-1" />
             {isSubmitting ? 'Submitting...' : 'Submit All'}
@@ -331,9 +335,9 @@ export default function DataEntryForm({ onEntriesUpdated }: { onEntriesUpdated?:
       
       <CardContent className="space-y-6">
         {entries.map((entry, index) => (
-          <div key={entry.id} className="space-y-4 p-4 border rounded-lg">
+          <div key={entry.id} className="space-y-4 p-4 border rounded-lg border-orange-200 bg-orange-50/30">
             <div className="flex justify-between items-center">
-              <h4 className="text-sm font-medium">Entry {index + 1}</h4>
+              <h4 className="text-sm font-medium text-orange-900">Exceptional Entry {index + 1}</h4>
               {entries.length > 1 && (
                 <Button
                   variant="ghost"
@@ -346,9 +350,21 @@ export default function DataEntryForm({ onEntriesUpdated }: { onEntriesUpdated?:
               )}
             </div>
 
+            {/* Date Selection - First and prominent */}
+            <div className="space-y-2">
+              <Label className="text-orange-900 font-medium">Entry Date *</Label>
+              <Input
+                type="date"
+                value={entry.date}
+                max={new Date().toISOString().split('T')[0]} // Prevent future dates
+                onChange={(e) => updateEntry(entry.id, 'date', e.target.value)}
+                className="border-orange-200 focus:border-orange-400"
+              />
+            </div>
+
             {/* Domain Selection - Button Group */}
             <div className="space-y-2">
-              <Label>Domain *</Label>
+              <Label className="text-orange-900">Domain *</Label>
               <div className="flex flex-wrap gap-2">
                 {Array.isArray(domains) && domains.map((domain) => (
                   <Button
@@ -356,6 +372,7 @@ export default function DataEntryForm({ onEntriesUpdated }: { onEntriesUpdated?:
                     variant={entry.domainId === domain.id ? "default" : "outline"}
                     size="sm"
                     onClick={() => updateEntry(entry.id, 'domainId', domain.id)}
+                    className={entry.domainId === domain.id ? "bg-orange-600 hover:bg-orange-700" : ""}
                   >
                     {domain.domainName}
                   </Button>
@@ -368,7 +385,7 @@ export default function DataEntryForm({ onEntriesUpdated }: { onEntriesUpdated?:
 
             {/* Client/Subdomain Dropdown */}
             <div className="space-y-2">
-              <Label>Client/Subdomain *</Label>
+              <Label className="text-orange-900">Client/Subdomain *</Label>
               <Select
                 value={entry.subdomainId.toString()}
                 onValueChange={(value) => updateEntry(entry.id, 'subdomainId', parseInt(value))}
@@ -389,7 +406,7 @@ export default function DataEntryForm({ onEntriesUpdated }: { onEntriesUpdated?:
 
             {/* Scope Dropdown */}
             <div className="space-y-2">
-              <Label>Scope *</Label>
+              <Label className="text-orange-900">Scope *</Label>
               <Select
                 value={entry.scopeId.toString()}
                 onValueChange={(value) => updateEntry(entry.id, 'scopeId', parseInt(value))}
@@ -411,7 +428,7 @@ export default function DataEntryForm({ onEntriesUpdated }: { onEntriesUpdated?:
             {/* Hours and Notes */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Hours *</Label>
+                <Label className="text-orange-900">Hours *</Label>
                 <Input
                   type="number"
                   step="0.25"
@@ -423,7 +440,7 @@ export default function DataEntryForm({ onEntriesUpdated }: { onEntriesUpdated?:
                 />
               </div>
               <div className="space-y-2">
-                <Label>Notes *</Label>
+                <Label className="text-orange-900">Notes *</Label>
                 <Textarea
                   value={entry.notes}
                   onChange={(e) => updateEntry(entry.id, 'notes', e.target.value)}

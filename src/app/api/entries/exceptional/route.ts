@@ -1,4 +1,4 @@
-// src/app/api/entries/route.ts
+// src/app/api/entries/exceptional/route.ts
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -19,15 +19,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No entries provided' }, { status: 400 })
     }
 
-    // Get current date info
-    const now = new Date()
-    const year = now.getFullYear()
-    const monthNo = now.getMonth() + 1
-    const day = now.getDate()
-    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December']
-    const month = monthNames[now.getMonth()]
-
     // Get consultant ID from database
     const user = await prisma.user.findUnique({
       where: { username: session.user.username },
@@ -38,23 +29,31 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Convert user ID to consultantId number (you might need to adjust this based on your ID system)
     const consultantId = parseInt(user.id) || 1000
 
-    // Create entries in database
+    // Create entries in database with custom dates
     const savedEntries = await prisma.$transaction(
-      entries.map((entry: any) => 
-        prisma.histData.create({
+      entries.map((entry: any) => {
+        // Parse the provided date
+        const entryDate = new Date(entry.date)
+        const year = entryDate.getFullYear()
+        const monthNo = entryDate.getMonth() + 1
+        const day = entryDate.getDate()
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+          'July', 'August', 'September', 'October', 'November', 'December']
+        const month = monthNames[entryDate.getMonth()]
+
+        return prisma.histData.create({
           data: {
-            source: 'ClientPlus',
+            source: 'Exceptional Entry', // Mark as exceptional
             year: year,
             monthNo: monthNo,
             day: day,
             month: month,
             consultantId: consultantId,
             consultant: session.user.username,
-            client: entry.subdomain, // Using subdomain as client name
-            activityType: 'Client', // Default activity type
+            client: entry.subdomain,
+            activityType: 'Client',
             workingHours: entry.hours,
             notes: entry.notes,
             domain: entry.domain,
@@ -62,18 +61,18 @@ export async function POST(request: Request) {
             scope: entry.scope,
           }
         })
-      )
+      })
     )
 
     return NextResponse.json({ 
-      message: `${savedEntries.length} entries saved successfully`,
+      message: `${savedEntries.length} exceptional entries saved successfully`,
       entries: savedEntries 
     })
 
   } catch (error) {
-    console.error('Error saving entries:', error)
+    console.error('Error saving exceptional entries:', error)
     return NextResponse.json({ 
-      error: 'Failed to save entries',
+      error: 'Failed to save exceptional entries',
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
   }

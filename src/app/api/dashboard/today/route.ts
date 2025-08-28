@@ -1,11 +1,16 @@
 // src/app/api/dashboard/today/route.ts
 import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 export async function GET() {
   try {
-    // For now, we'll use a mock session until auth is fully implemented
-    const session = { user: { id: '1000', name: 'islam' } }
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
     // Get today's date components
     const today = new Date()
@@ -13,12 +18,12 @@ export async function GET() {
     const monthNo = today.getMonth() + 1
     const day = today.getDate()
 
-    console.log('Fetching entries for:', { consultant: session.user.name, year, monthNo, day })
+    console.log('Fetching entries for:', { consultant: session.user.username, year, monthNo, day })
 
     // Fetch today's entries for the current user
     const todayEntries = await prisma.histData.findMany({
       where: {
-        consultant: session.user.name,
+        consultant: session.user.username,
         year: year,
         monthNo: monthNo,
         day: day,
