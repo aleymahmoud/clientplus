@@ -2,7 +2,9 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { Button } from '@/components/ui/button';
 import { 
   Users, 
   Clock, 
@@ -11,11 +13,13 @@ import {
   Shield,
   Award,
   Target,
-  Activity
+  Activity,
+  PlusCircle
 } from 'lucide-react';
 
 export default function DashboardPage() {
   const { data: session } = useSession();
+  const router = useRouter();
 
   if (!session?.user) {
     return null;
@@ -23,6 +27,11 @@ export default function DashboardPage() {
 
   const isAdmin = session.user.role === 'SUPER_USER';
   const isLead = session.user.role === 'LEAD_CONSULTANT';
+
+  // Navigation handlers
+  const handleNavigation = (path: string) => {
+    router.push(path);
+  };
 
   // Mock data - replace with real data from your API
   const dashboardStats = {
@@ -42,6 +51,7 @@ export default function DashboardPage() {
       href: '/entries',
       icon: Clock,
       color: 'bg-blue-500',
+      primary: true,
     },
     {
       title: 'View Reports',
@@ -171,6 +181,30 @@ export default function DashboardPage() {
           })}
         </div>
 
+        {/* Primary Action - Add Entry */}
+        <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold mb-2">Ready to log your work?</h2>
+              <p className="text-green-100 mb-4">
+                Track your time and manage your entries efficiently.
+              </p>
+              <Button
+                onClick={() => handleNavigation('/entries')}
+                variant="secondary"
+                size="lg"
+                className="bg-white text-green-600 hover:bg-gray-100"
+              >
+                <PlusCircle className="h-5 w-5 mr-2" />
+                Add Time Entry
+              </Button>
+            </div>
+            <div className="hidden md:block">
+              <Clock className="h-16 w-16 text-green-300" />
+            </div>
+          </div>
+        </div>
+
         {/* Quick Actions */}
         <div className="bg-white rounded-lg border p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
@@ -178,10 +212,10 @@ export default function DashboardPage() {
             {quickActions.map((action) => {
               const Icon = action.icon;
               return (
-                <a
+                <button
                   key={action.title}
-                  href={action.href}
-                  className="flex items-center space-x-4 p-4 rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all group"
+                  onClick={() => handleNavigation(action.href)}
+                  className="flex items-center space-x-4 p-4 rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all group text-left w-full"
                 >
                   <div className={`p-3 rounded-lg ${action.color} text-white`}>
                     <Icon className="h-6 w-6" />
@@ -192,13 +226,13 @@ export default function DashboardPage() {
                     </h3>
                     <p className="text-sm text-gray-500">{action.description}</p>
                   </div>
-                </a>
+                </button>
               );
             })}
           </div>
         </div>
 
-        {/* Recent Activity & Admin Notice */}
+        {/* Recent Activity & Role-specific Sections */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Recent Activity */}
           <div className="bg-white rounded-lg border p-6">
@@ -218,6 +252,22 @@ export default function DashboardPage() {
                   <p className="text-xs text-gray-500">1 day ago</p>
                 </div>
               </div>
+              <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                <Activity className="h-5 w-5 text-purple-600" />
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Updated project analytics</p>
+                  <p className="text-xs text-gray-500">3 days ago</p>
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 pt-4 border-t">
+              <Button 
+                variant="ghost" 
+                onClick={() => handleNavigation('/reports')}
+                className="text-sm text-blue-600 hover:text-blue-700"
+              >
+                View all activity →
+              </Button>
             </div>
           </div>
 
@@ -233,20 +283,21 @@ export default function DashboardPage() {
                 view system reports, and configure settings.
               </p>
               <div className="flex space-x-3">
-                <a
-                  href="/admin"
-                  className="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 transition-colors"
+                <Button
+                  onClick={() => handleNavigation('/admin')}
+                  className="bg-red-600 text-white hover:bg-red-700"
                 >
                   <Shield className="h-4 w-4 mr-2" />
                   Open Admin Panel
-                </a>
-                <a
-                  href="/admin/users"
-                  className="inline-flex items-center px-4 py-2 bg-white text-red-600 text-sm font-medium rounded-md border border-red-600 hover:bg-red-50 transition-colors"
+                </Button>
+                <Button
+                  onClick={() => handleNavigation('/admin/users')}
+                  variant="outline"
+                  className="border-red-600 text-red-600 hover:bg-red-50"
                 >
                   <Users className="h-4 w-4 mr-2" />
                   Manage Users
-                </a>
+                </Button>
               </div>
             </div>
           )}
@@ -261,13 +312,42 @@ export default function DashboardPage() {
               <p className="text-sm text-blue-700 mb-4">
                 As a lead consultant, you can view team analytics and generate reports.
               </p>
-              <a
-                href="/analytics"
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
+              <Button
+                onClick={() => handleNavigation('/analytics')}
+                className="bg-blue-600 text-white hover:bg-blue-700"
               >
                 <TrendingUp className="h-4 w-4 mr-2" />
                 View Team Analytics
-              </a>
+              </Button>
+            </div>
+          )}
+
+          {/* Regular User Section - For non-admin users */}
+          {!isAdmin && !isLead && (
+            <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-lg p-6">
+              <div className="flex items-center space-x-3 mb-4">
+                <Target className="h-6 w-6 text-green-600" />
+                <h2 className="text-lg font-semibold text-green-800">Your Goals</h2>
+              </div>
+              <p className="text-sm text-green-700 mb-4">
+                Stay on track with your productivity goals and time management.
+              </p>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-green-700">Weekly Target</span>
+                  <span className="text-sm font-medium text-green-800">40h</span>
+                </div>
+                <div className="w-full bg-green-200 rounded-full h-2">
+                  <div 
+                    className="bg-green-600 h-2 rounded-full" 
+                    style={{ width: `${(dashboardStats.weekHours / 40) * 100}%` }}
+                  ></div>
+                </div>
+                <div className="flex justify-between items-center text-xs text-green-600">
+                  <span>{dashboardStats.weekHours}h completed</span>
+                  <span>{Math.round((dashboardStats.weekHours / 40) * 100)}%</span>
+                </div>
+              </div>
             </div>
           )}
         </div>
