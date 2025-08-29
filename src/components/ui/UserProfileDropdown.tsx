@@ -65,7 +65,7 @@ export function UserProfileDropdown() {
           />
           
           {/* Dropdown Menu */}
-          <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border z-20">
+          <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-lg border z-20">
             {/* User Info Header */}
             <div className="px-4 py-3 border-b border-gray-100">
               <div className="flex items-center space-x-3">

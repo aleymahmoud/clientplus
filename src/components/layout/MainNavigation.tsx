@@ -26,7 +26,7 @@ interface NavigationItem {
 
 const navigationItems: NavigationItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
-  { href: '/entries', label: 'Add Entry', icon: PlusCircle },
+  { href: '/data-entry', label: 'Add Entry', icon: PlusCircle },
   { href: '/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/reports', label: 'Reports', icon: FileText },
   { href: '/settings', label: 'Settings', icon: Settings, roles: ['SUPER_USER', 'LEAD_CONSULTANT'] },
@@ -210,7 +210,7 @@ export function MainNavigation({ children }: MainNavigationProps) {
               <div className="hidden lg:block">
                 <h1 className="text-xl font-semibold text-gray-900">
                   {pathname === '/dashboard' && 'Dashboard'}
-                  {pathname === '/entries' && 'Add Entry'}
+                  {pathname === '/data-entry' && 'Add Entry'}
                   {pathname === '/analytics' && 'Analytics'}
                   {pathname === '/reports' && 'Reports'}
                   {pathname === '/settings' && 'Settings'}

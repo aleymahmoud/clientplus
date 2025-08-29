@@ -48,7 +48,7 @@ export default function DashboardPage() {
     {
       title: 'Add Time Entry',
       description: 'Log your work hours',
-      href: '/entries',
+      href: '/data-entry',
       icon: Clock,
       color: 'bg-blue-500',
       primary: true,
@@ -182,7 +182,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Primary Action - Add Entry */}
-        <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-6 text-white">
+        {/* <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-bold mb-2">Ready to log your work?</h2>
@@ -190,7 +190,7 @@ export default function DashboardPage() {
                 Track your time and manage your entries efficiently.
               </p>
               <Button
-                onClick={() => handleNavigation('/entries')}
+                onClick={() => handleNavigation('/data-entry')}
                 variant="secondary"
                 size="lg"
                 className="bg-white text-green-600 hover:bg-gray-100"
@@ -203,7 +203,7 @@ export default function DashboardPage() {
               <Clock className="h-16 w-16 text-green-300" />
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* Quick Actions */}
         <div className="bg-white rounded-lg border p-6">
