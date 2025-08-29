@@ -1,460 +1,277 @@
 // src/app/dashboard/page.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import Link from 'next/link';
+import { AppLayout } from '@/components/layout/AppLayout';
 import { 
+  Users, 
   Clock, 
   TrendingUp, 
-  Users, 
   Calendar,
-  Plus,
-  Eye,
-  Edit3,
-  Trash2
+  Shield,
+  Award,
+  Target,
+  Activity
 } from 'lucide-react';
-import AppLayout from '@/components/app-layout';
-import PageWrapper from '@/components/page-wrapper';
-import EntryModal from '@/components/dashboard/EntryModals';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { formatDate, calculateUtilization, getUtilizationColor } from '@/lib/utils';
-
-interface DashboardStats {
-  todayHours: number;
-  monthHours: number;
-  utilization: number;
-  activeClients: number;
-}
-
-interface TodayEntry {
-  id: number;
-  client: string;
-  domain: string;
-  subdomain: string;
-  scope: string;
-  hours: number;
-  notes: string;
-  createdAt: string;
-}
-
-interface RecentActivity {
-  id: number;
-  type: 'entry_added' | 'entry_updated' | 'entry_deleted';
-  description: string;
-  timestamp: Date;
-  user: string;
-}
 
 export default function DashboardPage() {
   const { data: session } = useSession();
-  const [stats, setStats] = useState<DashboardStats>({
-    todayHours: 0,
-    monthHours: 0,
-    utilization: 0,
-    activeClients: 0
-  });
-  const [todayEntries, setTodayEntries] = useState<TodayEntry[]>([]);
-  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  // Modal state
-  const [selectedEntry, setSelectedEntry] = useState<TodayEntry | null>(null);
-  const [modalMode, setModalMode] = useState<'view' | 'edit'>('view');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // Modal handlers
-  const handleViewEntry = (entry: TodayEntry) => {
-    setSelectedEntry(entry);
-    setModalMode('view');
-    setIsModalOpen(true);
-  };
-
-  const handleEditEntry = (entry: TodayEntry) => {
-    setSelectedEntry(entry);
-    setModalMode('edit');
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setSelectedEntry(null);
-  };
-
-  const handleEntrySaved = () => {
-    fetchDashboardData();
-  };
-
-  const fetchDashboardData = async () => {
-    try {
-      setLoading(true);
-
-      // Fetch dashboard stats
-      const statsResponse = await fetch('/api/dashboard/stats');
-      if (statsResponse.ok) {
-        const statsData = await statsResponse.json();
-        setStats(statsData);
-      } else {
-        console.error('Failed to fetch dashboard stats');
-        setStats({
-          todayHours: 0,
-          monthHours: 0,
-          utilization: 0,
-          activeClients: 0
-        });
-      }
-
-      // Fetch today's entries
-      const todayResponse = await fetch('/api/dashboard/today');
-      if (todayResponse.ok) {
-        const todayData = await todayResponse.json();
-        const formattedEntries = todayData.map((entry: any) => ({
-          id: entry.id,
-          client: entry.client,
-          domain: entry.domain,
-          subdomain: entry.subdomain,
-          scope: entry.scope,
-          hours: entry.hours,
-          notes: entry.notes,
-          createdAt: entry.createdAt
-        }));
-        setTodayEntries(formattedEntries);
-      } else {
-        console.error('Failed to fetch today\'s entries');
-        setTodayEntries([]);
-      }
-
-      // Fetch recent activity
-      const activityResponse = await fetch('/api/dashboard/activity');
-      if (activityResponse.ok) {
-        const activityData = await activityResponse.json();
-        const formattedActivity = activityData.map((activity: any) => ({
-          id: activity.id,
-          type: activity.type,
-          description: activity.description,
-          timestamp: new Date(activity.timestamp),
-          user: activity.user
-        }));
-        setRecentActivity(formattedActivity);
-      } else {
-        console.error('Failed to fetch recent activity');
-        setRecentActivity([]);
-      }
-
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (session) {
-      fetchDashboardData();
-    }
-  }, [session]);
-
-  const formatTimeAgo = (date: Date) => {
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(minutes / 60);
-
-    if (minutes < 60) {
-      return `${minutes}m ago`;
-    } else if (hours < 24) {
-      return `${hours}h ago`;
-    } else {
-      return formatDate(date);
-    }
-  };
-
-  const getActivityIcon = (type: RecentActivity['type']) => {
-    switch (type) {
-      case 'entry_added':
-        return <Plus size={14} className="text-green-600" />;
-      case 'entry_updated':
-        return <Edit3 size={14} className="text-blue-600" />;
-      case 'entry_deleted':
-        return <Trash2 size={14} className="text-red-600" />;
-      default:
-        return <Clock size={14} className="text-gray-600" />;
-    }
-  };
-
-  if (!session) {
-    return <div>Loading...</div>;
+  if (!session?.user) {
+    return null;
   }
 
-const [showAllActivity, setShowAllActivity] = useState(false)
+  const isAdmin = session.user.role === 'SUPER_USER';
+  const isLead = session.user.role === 'LEAD_CONSULTANT';
 
+  // Mock data - replace with real data from your API
+  const dashboardStats = {
+    todayHours: 6.5,
+    weekHours: 38.5,
+    monthHours: 165.2,
+    activeProjects: 4,
+    completedTasks: 23,
+    teamMembers: isLead || isAdmin ? 8 : 0,
+    utilizationRate: 87,
+  };
 
+  const quickActions = [
+    {
+      title: 'Add Time Entry',
+      description: 'Log your work hours',
+      href: '/entries',
+      icon: Clock,
+      color: 'bg-blue-500',
+    },
+    {
+      title: 'View Reports',
+      description: 'Analyze your performance',
+      href: '/reports',
+      icon: TrendingUp,
+      color: 'bg-green-500',
+    },
+    {
+      title: 'Analytics',
+      description: 'View detailed insights',
+      href: '/analytics',
+      icon: Activity,
+      color: 'bg-purple-500',
+    },
+  ];
+
+  // Add admin actions for super users
+  if (isAdmin) {
+    quickActions.push({
+      title: 'Admin Panel',
+      description: 'Manage users & system',
+      href: '/admin',
+      icon: Shield,
+      color: 'bg-red-500',
+    });
+  }
+
+  const statCards = [
+    {
+      title: 'Today\'s Hours',
+      value: dashboardStats.todayHours.toString(),
+      unit: 'hrs',
+      icon: Clock,
+      color: 'text-blue-600 bg-blue-100',
+    },
+    {
+      title: 'This Week',
+      value: dashboardStats.weekHours.toString(),
+      unit: 'hrs',
+      icon: Calendar,
+      color: 'text-green-600 bg-green-100',
+    },
+    {
+      title: 'This Month',
+      value: dashboardStats.monthHours.toString(),
+      unit: 'hrs',
+      icon: TrendingUp,
+      color: 'text-purple-600 bg-purple-100',
+    },
+    {
+      title: 'Utilization',
+      value: dashboardStats.utilizationRate.toString(),
+      unit: '%',
+      icon: Target,
+      color: 'text-orange-600 bg-orange-100',
+    },
+  ];
+
+  // Add team stats for leads and admins
+  if (isLead || isAdmin) {
+    statCards.push({
+      title: 'Team Members',
+      value: dashboardStats.teamMembers.toString(),
+      unit: 'people',
+      icon: Users,
+      color: 'text-indigo-600 bg-indigo-100',
+    });
+  }
 
   return (
     <AppLayout>
-      <PageWrapper
-        title="Dashboard"
-        description={`Welcome back, ${session.user.username}!`}
-      >
-        <div className="grid gap-6">
-          {/* Stats Cards */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Today's Hours</CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.todayHours}h</div>
-                <p className="text-xs text-muted-foreground">
-                  {stats.todayHours > 0 ? '+' : ''}
-                  {stats.todayHours} from yesterday
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Month Hours</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.monthHours}h</div>
-                <p className="text-xs text-muted-foreground">
-                  This month's total
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Utilization</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className={`text-2xl font-bold ${getUtilizationColor(stats.utilization)}`}>
-                  {stats.utilization}%
+      <div className="space-y-6">
+        {/* Welcome Header */}
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold mb-2">
+                Welcome back, {session.user.username}! 👋
+              </h1>
+              <p className="text-blue-100">
+                Here's your activity overview for today.
+              </p>
+              <div className="flex items-center mt-3 space-x-4">
+                <div className="flex items-center space-x-1">
+                  {isAdmin && <Shield className="h-4 w-4 text-red-300" />}
+                  <span className="text-blue-100 text-sm capitalize">
+                    {session.user.role?.replace('_', ' ').toLowerCase()}
+                  </span>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Monthly target progress
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Clients</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.activeClients}</div>
-                <p className="text-xs text-muted-foreground">
-                  This month
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Main Content Grid */}
-          <div className="grid gap-6 md:grid-cols-2">
-            {/* Today's Entries */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Today's Entries</CardTitle>
-                <CardDescription>
-                  Your work entries for {formatDate(new Date())}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <div className="space-y-3">
-                    {[1, 2, 3].map((i) => (
-                      <div key={i} className="animate-pulse">
-                        <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                        <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                      </div>
-                    ))}
-                  </div>
-                ) : todayEntries.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <Clock size={48} className="mx-auto mb-4 opacity-50" />
-                    <p>No entries for today yet.</p>
-                    <Link href="/data-entry">
-                      <Button variant="outline" className="mt-2">
-                        Add your first entry
-                      </Button>
-                    </Link>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {todayEntries.map((entry) => (
-                      <div key={entry.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <h4 className="font-medium">{entry.client}</h4>
-                            <Badge variant="secondary" className="text-xs">
-                              {entry.domain}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-gray-600 mb-1">
-                            {entry.subdomain} • {entry.scope}
-                          </p>
-                          {entry.notes && (
-                            <p className="text-xs text-gray-500 truncate">
-                              {entry.notes}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex items-center space-x-3">
-                          <span className="font-semibold text-blue-600">
-                            {entry.hours}h
-                          </span>
-                          <div className="flex space-x-1">
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => handleViewEntry(entry)}
-                              title="View entry details"
-                            >
-                              <Eye size={14} />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => handleEditEntry(entry)}
-                              title="Edit entry"
-                            >
-                              <Edit3 size={14} />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-        {/* Recent Activity */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Recent Activity</CardTitle>
-                <CardDescription>
-                  Your latest actions and updates
-                </CardDescription>
+                <div className="text-blue-100 text-sm">
+                  {new Date().toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}
+                </div>
               </div>
-              {recentActivity.length > 5 && (
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => setShowAllActivity(!showAllActivity)}
-                  className="text-blue-600 hover:text-blue-800"
-                >
-                  {showAllActivity ? 'Show Less' : `Show All (${recentActivity.length})`}
-                </Button>
-              )}
             </div>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="animate-pulse">
-                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                  </div>
-                ))}
-              </div>
-            ) : recentActivity.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <Clock size={48} className="mx-auto mb-4 opacity-50" />
-                <p>No recent activity.</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {(showAllActivity ? recentActivity : recentActivity.slice(0, 5)).map((activity) => (
-                  <div key={activity.id} className="flex items-start space-x-3">
-                    <div className="p-2 bg-gray-100 rounded-full">
-                      {getActivityIcon(activity.type)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        {activity.description}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {formatTimeAgo(activity.timestamp)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-                
-                {/* Show collapsed indicator if there are more than 5 items */}
-                {!showAllActivity && recentActivity.length > 5 && (
-                  <div className="text-center pt-2 border-t">
-                    <p className="text-xs text-gray-500">
-                      {recentActivity.length - 5} more activities
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+            <div className="hidden md:block">
+              <Award className="h-16 w-16 text-blue-300" />
+            </div>
           </div>
-
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>
-                Common tasks and shortcuts
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Link href="/data-entry">
-                  <Button variant="outline" className="w-full h-16 flex flex-col space-y-2">
-                    <Plus size={20} />
-                    <span className="text-sm">Add Entry</span>
-                  </Button>
-                </Link>
-                <Link href="/analytics">
-                  <Button variant="outline" className="w-full h-16 flex flex-col space-y-2">
-                    <TrendingUp size={20} />
-                    <span className="text-sm">View Analytics</span>
-                  </Button>
-                </Link>
-                <Link href="/reports">
-                  <Button variant="outline" className="w-full h-16 flex flex-col space-y-2">
-                    <Eye size={20} />
-                    <span className="text-sm">Generate Report</span>
-                  </Button>
-                </Link>
-                <Link href="/calendar">
-                  <Button variant="outline" className="w-full h-16 flex flex-col space-y-2">
-                    <Calendar size={20} />
-                    <span className="text-sm">View Calendar</span>
-                  </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
-        {/* Entry Modal */}
-        <EntryModal
-          entry={selectedEntry}
-          isOpen={isModalOpen}
-          mode={modalMode}
-          onClose={handleCloseModal}
-          onSave={handleEntrySaved}
-          onRefresh={fetchDashboardData}
-        />
-      </PageWrapper>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+          {statCards.map((card) => {
+            const Icon = card.icon;
+            return (
+              <div key={card.title} className="bg-white rounded-lg border p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">{card.title}</p>
+                    <div className="flex items-baseline space-x-1">
+                      <p className="text-2xl font-bold text-gray-900">{card.value}</p>
+                      <span className="text-sm text-gray-500">{card.unit}</span>
+                    </div>
+                  </div>
+                  <div className={`p-3 rounded-full ${card.color}`}>
+                    <Icon className="h-6 w-6" />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Quick Actions */}
+        <div className="bg-white rounded-lg border p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {quickActions.map((action) => {
+              const Icon = action.icon;
+              return (
+                <a
+                  key={action.title}
+                  href={action.href}
+                  className="flex items-center space-x-4 p-4 rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all group"
+                >
+                  <div className={`p-3 rounded-lg ${action.color} text-white`}>
+                    <Icon className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-gray-900 group-hover:text-blue-600">
+                      {action.title}
+                    </h3>
+                    <p className="text-sm text-gray-500">{action.description}</p>
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Recent Activity & Admin Notice */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Recent Activity */}
+          <div className="bg-white rounded-lg border p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
+            <div className="space-y-3">
+              <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                <Clock className="h-5 w-5 text-blue-600" />
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Added 2.5 hours to Client Project</p>
+                  <p className="text-xs text-gray-500">2 hours ago</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                <TrendingUp className="h-5 w-5 text-green-600" />
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Completed weekly report</p>
+                  <p className="text-xs text-gray-500">1 day ago</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Admin Access Notice - Only show for admins */}
+          {isAdmin && (
+            <div className="bg-gradient-to-br from-red-50 to-red-100 border border-red-200 rounded-lg p-6">
+              <div className="flex items-center space-x-3 mb-4">
+                <Shield className="h-6 w-6 text-red-600" />
+                <h2 className="text-lg font-semibold text-red-800">Admin Access</h2>
+              </div>
+              <p className="text-sm text-red-700 mb-4">
+                You have administrator privileges. Access the admin panel to manage users, 
+                view system reports, and configure settings.
+              </p>
+              <div className="flex space-x-3">
+                <a
+                  href="/admin"
+                  className="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 transition-colors"
+                >
+                  <Shield className="h-4 w-4 mr-2" />
+                  Open Admin Panel
+                </a>
+                <a
+                  href="/admin/users"
+                  className="inline-flex items-center px-4 py-2 bg-white text-red-600 text-sm font-medium rounded-md border border-red-600 hover:bg-red-50 transition-colors"
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  Manage Users
+                </a>
+              </div>
+            </div>
+          )}
+
+          {/* Team Overview - Only show for leads and admins */}
+          {(isLead || isAdmin) && !isAdmin && (
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-6">
+              <div className="flex items-center space-x-3 mb-4">
+                <Users className="h-6 w-6 text-blue-600" />
+                <h2 className="text-lg font-semibold text-blue-800">Team Overview</h2>
+              </div>
+              <p className="text-sm text-blue-700 mb-4">
+                As a lead consultant, you can view team analytics and generate reports.
+              </p>
+              <a
+                href="/analytics"
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
+              >
+                <TrendingUp className="h-4 w-4 mr-2" />
+                View Team Analytics
+              </a>
+            </div>
+          )}
+        </div>
+      </div>
     </AppLayout>
   );
 }
