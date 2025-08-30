@@ -16,10 +16,46 @@ import {
   Activity,
   PlusCircle
 } from 'lucide-react';
+import TodaysEntries from '@/components/data-entry/TodaysEntries'
+import { useEffect, useState } from 'react'
 
 export default function DashboardPage() {
   const { data: session } = useSession();
   const router = useRouter();
+
+  const [dashboardStats, setDashboardStats] = useState({
+    todayHours: 0,
+    monthHours: 0,
+    utilization: 0,
+    activeClients: 0,
+  })
+
+  const [recentActivity, setRecentActivity] = useState([])
+
+  // useEffect to fetch real data
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch stats
+        const statsResponse = await fetch('/api/dashboard/stats')
+        if (statsResponse.ok) {
+          const stats = await statsResponse.json()
+          setDashboardStats(stats)
+        }
+
+        // Fetch activity
+        const activityResponse = await fetch('/api/dashboard/activity')
+        if (activityResponse.ok) {
+          const activity = await activityResponse.json()
+          setRecentActivity(activity)
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error)
+      }
+    }
+    
+    fetchData()
+  }, [])
 
   if (!session?.user) {
     return null;
@@ -31,17 +67,6 @@ export default function DashboardPage() {
   // Navigation handlers
   const handleNavigation = (path: string) => {
     router.push(path);
-  };
-
-  // Mock data - replace with real data from your API
-  const dashboardStats = {
-    todayHours: 6.5,
-    weekHours: 38.5,
-    monthHours: 165.2,
-    activeProjects: 4,
-    completedTasks: 23,
-    teamMembers: isLead || isAdmin ? 8 : 0,
-    utilizationRate: 87,
   };
 
   const quickActions = [
@@ -89,14 +114,7 @@ export default function DashboardPage() {
       color: 'text-blue-600 bg-blue-100',
     },
     {
-      title: 'This Week',
-      value: dashboardStats.weekHours.toString(),
-      unit: 'hrs',
-      icon: Calendar,
-      color: 'text-green-600 bg-green-100',
-    },
-    {
-      title: 'This Month',
+      title: 'This Month', 
       value: dashboardStats.monthHours.toString(),
       unit: 'hrs',
       icon: TrendingUp,
@@ -104,10 +122,17 @@ export default function DashboardPage() {
     },
     {
       title: 'Utilization',
-      value: dashboardStats.utilizationRate.toString(),
+      value: dashboardStats.utilization.toString(),
       unit: '%',
       icon: Target,
       color: 'text-orange-600 bg-orange-100',
+    },
+    {
+      title: 'Active Clients',
+      value: dashboardStats.activeClients.toString(),
+      unit: 'clients',
+      icon: Users,
+      color: 'text-green-600 bg-green-100',
     },
   ];
 
@@ -115,7 +140,7 @@ export default function DashboardPage() {
   if (isLead || isAdmin) {
     statCards.push({
       title: 'Team Members',
-      value: dashboardStats.teamMembers.toString(),
+      value: dashboardStats.teamMembers?.toString() || '0',
       unit: 'people',
       icon: Users,
       color: 'text-indigo-600 bg-indigo-100',
@@ -181,30 +206,6 @@ export default function DashboardPage() {
           })}
         </div>
 
-        {/* Primary Action - Add Entry */}
-        {/* <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-bold mb-2">Ready to log your work?</h2>
-              <p className="text-green-100 mb-4">
-                Track your time and manage your entries efficiently.
-              </p>
-              <Button
-                onClick={() => handleNavigation('/data-entry')}
-                variant="secondary"
-                size="lg"
-                className="bg-white text-green-600 hover:bg-gray-100"
-              >
-                <PlusCircle className="h-5 w-5 mr-2" />
-                Add Time Entry
-              </Button>
-            </div>
-            <div className="hidden md:block">
-              <Clock className="h-16 w-16 text-green-300" />
-            </div>
-          </div>
-        </div> */}
-
         {/* Quick Actions */}
         <div className="bg-white rounded-lg border p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
@@ -238,27 +239,26 @@ export default function DashboardPage() {
           <div className="bg-white rounded-lg border p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
             <div className="space-y-3">
-              <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                <Clock className="h-5 w-5 text-blue-600" />
-                <div>
-                  <p className="text-sm font-medium text-gray-900">Added 2.5 hours to Client Project</p>
-                  <p className="text-xs text-gray-500">2 hours ago</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                <TrendingUp className="h-5 w-5 text-green-600" />
-                <div>
-                  <p className="text-sm font-medium text-gray-900">Completed weekly report</p>
-                  <p className="text-xs text-gray-500">1 day ago</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                <Activity className="h-5 w-5 text-purple-600" />
-                <div>
-                  <p className="text-sm font-medium text-gray-900">Updated project analytics</p>
-                  <p className="text-xs text-gray-500">3 days ago</p>
-                </div>
-              </div>
+              {recentActivity.length > 0 ? (
+                recentActivity.slice(0, 4).map((activity, index) => (
+                  <div key={activity.id || index} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                    <Clock className="h-5 w-5 text-blue-600" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{activity.description}</p>
+                      <p className="text-xs text-gray-500">
+                        {new Date(activity.timestamp).toLocaleString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-gray-500">No recent activity</p>
+              )}
             </div>
             <div className="mt-4 pt-4 border-t">
               <Button 
@@ -322,34 +322,11 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* Regular User Section - For non-admin users */}
-          {!isAdmin && !isLead && (
-            <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-lg p-6">
-              <div className="flex items-center space-x-3 mb-4">
-                <Target className="h-6 w-6 text-green-600" />
-                <h2 className="text-lg font-semibold text-green-800">Your Goals</h2>
-              </div>
-              <p className="text-sm text-green-700 mb-4">
-                Stay on track with your productivity goals and time management.
-              </p>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-green-700">Weekly Target</span>
-                  <span className="text-sm font-medium text-green-800">40h</span>
-                </div>
-                <div className="w-full bg-green-200 rounded-full h-2">
-                  <div 
-                    className="bg-green-600 h-2 rounded-full" 
-                    style={{ width: `${(dashboardStats.weekHours / 40) * 100}%` }}
-                  ></div>
-                </div>
-                <div className="flex justify-between items-center text-xs text-green-600">
-                  <span>{dashboardStats.weekHours}h completed</span>
-                  <span>{Math.round((dashboardStats.weekHours / 40) * 100)}%</span>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Today's Entries */}
+          <div className="bg-white rounded-lg border p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Today's Entries</h2>
+            <TodaysEntries />
+          </div>
         </div>
       </div>
     </AppLayout>
